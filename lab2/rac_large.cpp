@@ -5,8 +5,10 @@ using int64 = long long; // 64-bit integer type
 int64 mod_pow(int64 a, int64 e, int64 m) {
     int64 r = 1; a %= m;
     while (e) {
-        if (e & 1) r = (__int128)r * a % m;
-        a = (__int128)a * a % m;
+        // if (e & 1) r = (__int128)r * a % m;
+        if (e & 1) r = r * a % m;
+        // a = (__int128)a * a % m;
+        a = a * a % m;
         e >>= 1;
     }
     return r;
@@ -54,18 +56,18 @@ int main() {
 
     cout << "Private exponent d = " << d << "\n";
 
-    vector<long long> dd;
-    for (long long k = 1; k < phi; ++k) {
-        if ((1 + k * phi) % e == 0) {
-            long long d_cand = (1 + k * phi) / e;
-            dd.push_back(d_cand);
-            if ((int)dd.size() >= 8) break;
-        }
-    }
+    // vector<long long> dd;
+    // for (long long k = 1; k < phi; ++k) {
+    //     if ((1 + k * phi) % e == 0) {
+    //         long long d_cand = (1 + k * phi) / e;
+    //         dd.push_back(d_cand);
+    //         if ((int)dd.size() >= 8) break;
+    //     }
+    // }
 
-    cout << "Candidate d values: ";
-    for (long long v : dd) cout << v << " ";
-    cout << "\n";
+    // cout << "Candidate d values: ";
+    // for (long long v : dd) cout << v << " ";
+    // cout << "\n";
 
     long long m;
     cout << "Enter plaintext m: ";
@@ -82,3 +84,44 @@ int main() {
 
     cout << "Decrypted: " << mod_pow(c, d, n) << "\n";
 }
+
+/*
+
+demo 
+
+Enter prime p and q: 11 7
+n = 77, phi = 60
+Enter public exponent e (0 for auto): 7
+Private exponent d = 43
+Enter plaintext m: 9
+Ciphertext c = 37
+Found exponent i = 13 (possible d)
+Decrypted: 9
+
+Test Case 1
+p = 1000003
+q = 1000033
+e = 65537
+m = 123456
+
+Test Case 2
+p = 10000019
+q = 10000103
+e = 65537
+m = 9876543
+
+
+Test Case 3
+p = 100000007
+q = 100000037
+e = 65537
+m = 123456789
+
+
+Test Case 4 (Near 1 Billion)
+p = 1000000007
+q = 1000000009
+e = 65537
+m = 123456789
+
+*/
