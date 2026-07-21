@@ -1,0 +1,17 @@
+{
+    "Basic C++ Program": {
+        "prefix": "cpp",
+        "body": [
+            "#include <bits/stdc++.h>",
+            "using namespace std;",
+            "",
+            "int main()",
+            "{",
+            "    $0",
+            "",
+            "    return 0;",
+            "}"
+        ],
+        "description": "Basic C++ program template"
+    }
+}
