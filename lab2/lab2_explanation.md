@@ -1,3 +1,5 @@
+# Binary Exponentiation 
+
 Let's trace the function with a complete example.
 
 We'll calculate:
