@@ -1,0 +1,738 @@
+1. BASIC ROUTER INTERFACE CONFIGURATION
+
+
+Where:
+    Router → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface g0/0
+    ip address 192.168.1.1 255.255.255.0
+    no shutdown
+    exit
+
+    end
+
+Check:
+
+    show ip interface brief
+
+
+
+2. SERVER AS DHCP
+
+
+A. FIRST GIVE THE DHCP SERVER A STATIC IP
+-----------------------------------------
+
+Where:
+    Server → Desktop → IP Configuration
+
+Example:
+
+    IP Address:       192.168.2.2
+    Subnet Mask:      255.255.255.0
+    Default Gateway:  192.168.2.1
+    DNS Server:       8.8.8.8
+
+IMPORTANT:
+    DHCP Server's own IP should be STATIC.
+    Do NOT set the DHCP server itself to DHCP.
+
+
+B. CONFIGURE DHCP SERVICE
+-------------------------
+
+Where:
+    Server → Services → DHCP → On
+
+Example pool:
+
+    Pool Name:              LAN
+    Default Gateway:        192.168.1.1
+    DNS Server:             8.8.8.8
+    Start IP Address:       192.168.1.10
+    Subnet Mask:            255.255.255.0
+    Maximum Number of Users: 100
+
+Click:
+
+    Add
+
+
+C. CONFIGURE CLIENT PCs
+-----------------------
+
+Where:
+    PC → Desktop → IP Configuration → DHCP
+
+The PC should automatically receive:
+
+    IP Address
+    Subnet Mask
+    Default Gateway
+    DNS Server
+
+
+
+3. DHCP SERVER ON ANOTHER NETWORK (DHCP RELAY)
+
+
+Example:
+
+    DHCP Server:
+        IP = 192.168.2.2
+
+    Client Network:
+        192.168.1.0/24
+
+    Client Gateway:
+        192.168.1.1
+
+
+A. DHCP SERVER
+--------------
+
+Server → Desktop → IP Configuration:
+
+    IP Address:       192.168.2.2
+    Subnet Mask:      255.255.255.0
+    Default Gateway:  192.168.2.1
+
+
+B. DHCP POOL FOR REMOTE CLIENT NETWORK
+--------------------------------------
+
+Server → Services → DHCP
+
+    Pool Name:       CLIENT
+    Default Gateway: 192.168.1.1
+    Start IP:        192.168.1.10
+    Subnet Mask:     255.255.255.0
+
+Click:
+
+    Add
+
+
+C. CONFIGURE DHCP RELAY
+-----------------------
+
+Where:
+    Router → CLI
+
+On the router interface facing the CLIENT network:
+
+    enable
+    configure terminal
+
+    interface g0/0
+    ip address 192.168.1.1 255.255.255.0
+    ip helper-address 192.168.2.2
+    no shutdown
+    exit
+
+    end
+
+
+
+D. ROUTING
+----------
+
+The router must also have a route to the DHCP server network.
+
+Check:
+
+    show ip route
+
+If static routing is needed:
+
+    ip route 192.168.2.0 255.255.255.0 NEXT_HOP
+
+
+
+4. ROUTER AS DHCP SERVER
+
+
+Where:
+    Router → CLI
+
+A. CONFIGURE ROUTER INTERFACE
+-----------------------------
+
+    enable
+    configure terminal
+
+    interface g0/0
+    ip address 192.168.1.1 255.255.255.0
+    no shutdown
+    exit
+
+
+B. EXCLUDE ADDRESSES
+--------------------
+
+Prevents specific addresses from being given to clients.
+
+Example:
+
+    ip dhcp excluded-address 192.168.1.1 192.168.1.10
+
+
+C. CREATE DHCP POOL
+-------------------
+
+    ip dhcp pool LAN
+    network 192.168.1.0 255.255.255.0
+    default-router 192.168.1.1
+    dns-server 8.8.8.8
+    exit
+
+    end
+
+
+D. CLIENT
+---------
+
+PC → Desktop → IP Configuration → DHCP
+
+
+
+
+5. VLAN CREATION
+
+
+Where:
+    Switch → CLI
+
+Create VLANs:
+
+    enable
+    configure terminal
+
+    vlan 10
+    name FACULTY
+    exit
+
+    vlan 20
+    name STUDENT
+    exit
+
+    vlan 30
+    name GUEST
+    exit
+
+    vlan 99
+    name NATIVE
+    exit
+
+
+Check:
+
+    show vlan brief
+
+
+
+6. ASSIGN ACCESS PORTS TO VLANs
+
+
+Any available switch ports can be used.
+
+Example:
+
+    Fa0/1-Fa0/5   → VLAN 10
+    Fa0/6-Fa0/10  → VLAN 20
+    Fa0/11-Fa0/15 → VLAN 30
+
+
+VLAN 10:
+
+    interface range fa0/1-5
+    switchport mode access
+    switchport access vlan 10
+    exit
+
+
+VLAN 20:
+
+    interface range fa0/6-10
+    switchport mode access
+    switchport access vlan 20
+    exit
+
+
+VLAN 30:
+
+    interface range fa0/11-15
+    switchport mode access
+    switchport access vlan 30
+    exit
+
+
+Check:
+
+    show vlan brief
+
+
+
+
+
+7. TRUNK + NATIVE VLAN
+
+
+Used for:
+    Switch ↔ Router
+    Switch ↔ Switch
+
+Example trunk port:
+
+    interface fa0/24
+    switchport mode trunk
+    switchport trunk native vlan 99
+    switchport trunk allowed vlan 10,20,30,99
+    exit
+
+
+Check:
+
+    show interfaces trunk
+
+
+
+
+
+8. ROUTER-ON-A-STICK
+
+
+Purpose:
+    Inter-VLAN routing using ONE physical router interface.
+
+Topology:
+
+    PCs
+     |
+    Switch
+     |
+    Trunk
+     |
+   Router
+
+
+A. SWITCH
+---------
+
+Assume Fa0/24 connects to the router:
+
+    interface fa0/24
+    switchport mode trunk
+    switchport trunk native vlan 99
+    switchport trunk allowed vlan 10,20,30,99
+    exit
+
+
+B. ROUTER PHYSICAL INTERFACE
+----------------------------
+
+Where:
+    Router → CLI
+
+    enable
+    configure terminal
+
+    interface g0/0
+    no shutdown
+    exit
+
+
+C. VLAN 10 SUBINTERFACE
+-----------------------
+
+    interface g0/0.10
+    encapsulation dot1Q 10
+    ip address 192.168.10.1 255.255.255.0
+    exit
+
+
+D. VLAN 20 SUBINTERFACE
+-----------------------
+
+    interface g0/0.20
+    encapsulation dot1Q 20
+    ip address 192.168.20.1 255.255.255.0
+    exit
+
+
+E. VLAN 30 SUBINTERFACE
+-----------------------
+
+    interface g0/0.30
+    encapsulation dot1Q 30
+    ip address 192.168.30.1 255.255.255.0
+    exit
+
+
+F. NATIVE VLAN 99 SUBINTERFACE
+------------------------------
+
+    interface g0/0.99
+    encapsulation dot1Q 99 native
+    ip address 192.168.99.1 255.255.255.0
+    exit
+
+    end
+
+
+
+G. PC ADDRESSING
+----------------
+
+VLAN 10 PC:
+
+    IP:       192.168.10.10
+    Mask:     255.255.255.0
+    Gateway:  192.168.10.1
+
+
+VLAN 20 PC:
+
+    IP:       192.168.20.10
+    Mask:     255.255.255.0
+    Gateway:  192.168.20.1
+
+
+VLAN 30 PC:
+
+    IP:       192.168.30.10
+    Mask:     255.255.255.0
+    Gateway:  192.168.30.1
+
+
+VLAN 99 device:
+
+    IP:       192.168.99.10
+    Mask:     255.255.255.0
+    Gateway:  192.168.99.1
+
+
+
+9. LAYER 3 SWITCH INTER-VLAN ROUTING
+
+
+Purpose:
+    Layer 3 switch performs routing between VLANs.
+
+Where:
+    Layer 3 Switch → CLI
+
+
+A. CREATE VLANs
+---------------
+
+    enable
+    configure terminal
+
+    vlan 10
+    name FACULTY
+    exit
+
+    vlan 20
+    name STUDENT
+    exit
+
+    vlan 30
+    name GUEST
+    exit
+
+
+B. ENABLE LAYER 3 ROUTING
+-------------------------
+
+    ip routing
+
+
+C. CREATE SVI FOR VLAN 10
+-------------------------
+
+    interface vlan 10
+    ip address 192.168.10.1 255.255.255.0
+    no shutdown
+    exit
+
+
+D. SVI FOR VLAN 20
+------------------
+
+    interface vlan 20
+    ip address 192.168.20.1 255.255.255.0
+    no shutdown
+    exit
+
+
+E. SVI FOR VLAN 30
+------------------
+
+    interface vlan 30
+    ip address 192.168.30.1 255.255.255.0
+    no shutdown
+    exit
+
+
+F. ASSIGN ACCESS PORTS
+----------------------
+
+    interface range fa0/1-5
+    switchport mode access
+    switchport access vlan 10
+    exit
+
+    interface range fa0/6-10
+    switchport mode access
+    switchport access vlan 20
+    exit
+
+    interface range fa0/11-15
+    switchport mode access
+    switchport access vlan 30
+    exit
+
+
+G. PC GATEWAYS
+--------------
+
+VLAN 10:
+    Gateway = 192.168.10.1
+
+VLAN 20:
+    Gateway = 192.168.20.1
+
+VLAN 30:
+    Gateway = 192.168.30.1
+
+
+
+
+10. INTER-VLAN COMMUNICATION
+
+
+For PCs to communicate between VLANs:
+
+    Each PC needs:
+        IP address
+        Subnet mask
+        Default gateway
+
+Example:
+
+    PC1 VLAN 10
+        IP      = 192.168.10.10
+        Mask    = 255.255.255.0
+        Gateway = 192.168.10.1
+
+    PC2 VLAN 20
+        IP      = 192.168.20.10
+        Mask    = 255.255.255.0
+        Gateway = 192.168.20.1
+
+Then:
+
+    PC1 → Router/L3 Switch → PC2
+
+
+
+11. USER EXEC + PRIVILEGED EXEC PASSWORD
+
+
+Where:
+    Router → CLI
+
+    enable
+    configure terminal
+
+
+A. USER EXEC / CONSOLE PASSWORD
+-------------------------------
+
+    line console 0
+    password 123pass
+    login
+    exit
+
+
+B. PRIVILEGED EXEC PASSWORD
+---------------------------
+
+    enable secret 123pass
+
+    end
+
+
+
+
+12. BANNER
+
+
+Where:
+    Router → CLI
+
+    enable
+    configure terminal
+
+    banner motd #Unauthorized access prohibited!#
+
+    end
+
+
+
+13. User Exec Password, Privileged Exec Password, Tellnet and SSH
+
+USER EXEC + PRIVILEGED EXEC
+---------------------------
+
+Router> enable
+Router# configure terminal
+
+Router(config)# line console 0
+Router(config-line)# password 1234
+Router(config-line)# login
+Router(config-line)# exit
+
+Router(config)# enable secret 1234
+
+
+TELNET
+------
+
+Router(config)# line vty 0 15
+Router(config-line)# password 1234
+Router(config-line)# login
+Router(config-line)# transport input telnet
+Router(config-line)# exit
+
+
+SSH
+---
+
+Router(config)# hostname admin
+Router(config)# username admin secret 1234
+
+Router(config)# line vty 0 15
+Router(config-line)# login local
+Router(config-line)# transport input ssh
+Router(config-line)# exit
+
+Router(config)# ip domain-name admin.com
+Router(config)# crypto key generate rsa
+    → Choose key size when asked
+
+Router(config)# ip ssh version 2
+
+
+SAVE
+----
+
+Router# end
+Router# write
+From PC → Command Prompt
+TELNET:
+
+PC> telnet 192.168.1.1
+
+
+SSH:
+
+PC> ssh -l admin 192.168.1.1
+
+17. All Password Change — Compact Commands
+
+
+1. Console cable → connect to router
+2. Restart router
+
+Router> enable
+Router# copy startup-config running-config
+
+Router# configure terminal
+
+Router(config)# enable secret 123new
+
+Router(config)# line console 0
+Router(config-line)# password 123
+Router(config-line)# login
+Router(config-line)# exit
+
+Router(config)# line vty 0 15
+Router(config-line)# password 123
+Router(config-line)# login
+Router(config-line)# exit
+
+Router(config)# username admin secret 1234
+Router(config)# config-register 0x2102
+
+Router(config)# end
+
+Router# write
+
+
+17. STATIC ROUTING
+
+
+Syntax:
+
+    ip route DESTINATION_NETWORK SUBNET_MASK NEXT_HOP
+
+
+Example:
+
+    ip route 192.168.2.0 255.255.255.0 192.168.3.2
+
+
+18. DEFAULT ROUTE
+
+    ip route 0.0.0.0 0.0.0.0 NEXT_HOP
+
+
+
+19. RIP VERSION 2
+
+
+Where:
+    Router → CLI
+
+    enable
+    configure terminal
+
+    router rip
+    version 2
+    no auto-summary
+
+    network 192.168.1.0
+    network 192.168.3.0
+
+    exit
+    end
+
+
+20. OSPF
+
+
+Where:
+    Router → CLI
+
+    enable
+    configure terminal
+
+    router ospf 1
+
+    network 192.168.1.0 0.0.0.255 area 0
+    network 192.168.3.0 0.0.0.255 area 0
+
+    exit
+    end
+
+
+
+
+

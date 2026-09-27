@@ -1,0 +1,372 @@
+
+2. STATIC NAT — 1 : 1
+ 
+
+Where to place:
+    Router7 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface gigabitEthernet 0/0
+    ip nat outside
+    exit
+
+    interface gigabitEthernet 0/1
+    ip nat inside
+    exit
+
+    ip nat inside source static 10.0.0.240 209.165.100.29
+
+    end
+
+Check:
+
+    show ip nat translation
+
+
+
+3. STATIC PAT — PORT 80
+ 
+
+Where to place:
+    Router7 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface gigabitEthernet 0/0
+    ip nat outside
+    exit
+
+    interface gigabitEthernet 0/1
+    ip nat inside
+    exit
+
+    ip nat inside source static tcp 10.0.0.250 80 209.165.100.30 80
+
+    end
+
+Check:
+
+    show ip nat translation
+
+
+
+4. NAT OVERLOAD / PAT
+ 
+
+Where to place:
+    Router7 → CLI
+
+Step 1 — Create ACL:
+
+    enable
+    configure terminal
+
+    access-list 10 permit 10.0.0.0 0.255.255.255
+
+Step 2 — Enable PAT:
+
+    ip nat inside source list 10 interface gigabitEthernet 0/0 overload
+
+    end
+
+Check:
+
+    show ip nat translation
+
+
+
+5. DYNAMIC NAT — NAT POOL
+   
+
+Where to place:
+    Router6 → CLI
+
+Step 1 — Configure interfaces:
+
+    enable
+    configure terminal
+
+    interface gigabitEthernet 0/1
+    ip nat outside
+    exit
+
+    interface gigabitEthernet 0/0
+    ip nat inside
+    exit
+
+Step 2 — Create ACL:
+
+    access-list 1 permit 192.168.1.0 0.0.0.255
+
+Step 3 — Create NAT pool:
+
+    ip nat pool MYPOOL 209.165.100.17 209.165.100.24 netmask 255.255.255.240
+
+Step 4 — Connect ACL to pool:
+
+    ip nat inside source list 1 pool MYPOOL overload
+
+    end
+
+Check:
+
+    show ip nat translation
+
+
+
+ 
+LAB 8 — GRE WITH IPSEC
+ 
+
+9. ROUTER0 BASIC CONFIGURATION
+        
+
+Where to place:
+    Router0 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface FastEthernet0/0
+    ip address 10.0.0.1 255.255.255.0
+    no shutdown
+    exit
+
+    interface FastEthernet0/1
+    ip address 192.168.1.1 255.255.255.0
+    no shutdown
+    exit
+
+    ip route 20.0.0.0 255.255.255.0 10.0.0.2
+
+    end
+
+Check:
+
+    show ip interface brief
+
+    show ip route
+
+
+
+10. ROUTER1 TRANSIT CONFIGURATION
+           
+
+Where to place:
+    Router1 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface FastEthernet0/0
+    ip address 10.0.0.2 255.255.255.0
+    no shutdown
+    exit
+
+    interface FastEthernet0/1
+    ip address 20.0.0.2 255.255.255.0
+    no shutdown
+    exit
+
+    end
+
+No GRE configuration on Router1.
+
+No IPsec configuration on Router1.
+
+
+
+11. ROUTER2 BASIC CONFIGURATION
+         
+
+Where to place:
+    Router2 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface FastEthernet0/0
+    ip address 20.0.0.1 255.255.255.0
+    no shutdown
+    exit
+
+    interface FastEthernet0/1
+    ip address 192.168.2.1 255.255.255.0
+    no shutdown
+    exit
+
+    ip route 10.0.0.0 255.255.255.0 20.0.0.2
+
+    end
+
+Check:
+
+    show ip interface brief
+
+    show ip route
+
+
+
+12. GRE TUNNEL — ROUTER0
+  
+
+Where to place:
+    Router0 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface Tunnel1
+    ip address 50.50.50.1 255.255.255.0
+    tunnel source FastEthernet0/0
+    tunnel destination 20.0.0.1
+    exit
+
+    ip route 192.168.2.0 255.255.255.0 50.50.50.2
+
+    end
+
+Check:
+
+    show interface tunnel1
+
+    show ip route
+
+
+
+13. GRE TUNNEL — ROUTER2
+  
+
+Where to place:
+    Router2 → CLI
+
+Commands:
+
+    enable
+    configure terminal
+
+    interface Tunnel1
+    ip address 50.50.50.2 255.255.255.0
+    tunnel source FastEthernet0/0
+    tunnel destination 10.0.0.1
+    exit
+
+    ip route 192.168.1.0 255.255.255.0 50.50.50.1
+
+    end
+
+Check:
+
+    show interface tunnel1
+
+    show ip route
+
+
+
+
+15. IPSEC — ROUTER0
+                   
+
+Where to place:
+    Router0 → CLI
+
+Step 1 — ISAKMP policy:
+
+    enable
+    configure terminal
+
+    crypto isakmp policy 10
+    encryption aes
+    authentication pre-share
+    group 2
+    exit
+
+Step 2 — Pre-shared key:
+
+    crypto isakmp key cisco123 address 20.0.0.1
+
+Step 3 — Transform set:
+
+    crypto ipsec transform-set SET esp-aes esp-sha-hmac
+
+Step 4 — Crypto ACL:
+
+    access-list 110 permit gre host 10.0.0.1 host 20.0.0.1
+
+Step 5 — Crypto map:
+
+    crypto map MAP 10 ipsec-isakmp
+    set peer 20.0.0.1
+    set transform-set SET
+    match address 110
+    exit
+
+Step 6 — Apply crypto map:
+
+    interface FastEthernet0/0
+    crypto map MAP
+    exit
+
+    end
+
+
+
+16. IPSEC — ROUTER2
+                   
+
+Where to place:
+    Router2 → CLI
+
+Step 1 — ISAKMP policy:
+
+    enable
+    configure terminal
+
+    crypto isakmp policy 10
+    encryption aes
+    authentication pre-share
+    group 2
+    exit
+
+Step 2 — Pre-shared key:
+
+    crypto isakmp key cisco123 address 10.0.0.1
+
+Step 3 — Transform set:
+
+    crypto ipsec transform-set SET esp-aes esp-sha-hmac
+
+Step 4 — Crypto ACL:
+
+    access-list 110 permit gre host 20.0.0.1 host 10.0.0.1
+
+Step 5 — Crypto map:
+
+    crypto map MAP 10 ipsec-isakmp
+    set peer 10.0.0.1
+    set transform-set SET
+    match address 110
+    exit
+
+Step 6 — Apply crypto map:
+
+    interface FastEthernet0/0
+    crypto map MAP
+    exit
+
+    end
